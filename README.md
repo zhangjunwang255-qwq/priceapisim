@@ -30,7 +30,7 @@ cp .env.example .env
 4. 在 Variables 中添加：
    - `TQ_ACCOUNT` = 你的快期账号
    - `TQ_PASSWORD` = 你的快期密码
-   - `SYMBOLS` = GFEX.pb2406,GFEX.pd2406（或实际合约代码）
+   - `SYMBOLS` = KQ.m@GFEX.pt,KQ.m@GFEX.pd（主连合约，自动跟随主力）
 5. Deploy
 
 ### 3. 验证
@@ -63,17 +63,17 @@ python main.py
 | 接口 | 说明 | 参数 |
 |------|------|------|
 | `GET /` | 前端页面 | - |
-| `GET /api/latest` | 最新行情 | `symbols` 逗号分隔，默认 GFEX.pb2406,GFEX.pd2406 |
+| `GET /api/latest` | 最新行情 | `symbols` 逗号分隔，默认 `KQ.m@GFEX.pt,KQ.m@GFEX.pd` |
 | `GET /api/history` | 历史数据 | `symbol` 必填，`limit` 默认 100 |
 | `GET /health` | 健康检查 | - |
 
 ## 合约代码
 
-广期所铂钯合约代码格式：
-- 铂金: `GFEX.pb<年份><月份>`，如 `GFEX.pb2406`（2024年6月）
-- 钯金: `GFEX.pd<年份><月份>`，如 `GFEX.pd2406`
+广期所铂钯合约使用主连合约代码：
+- 铂金主连: `KQ.m@GFEX.pt`
+- 钯金主连: `KQ.m@GFEX.pd`
 
-**注意**: 合约有换月周期，月底/月初需要更新 `SYMBOLS` 环境变量。
+主连合约会自动跟随当前主力月份，无需手动换月。
 
 ## 目录结构
 
