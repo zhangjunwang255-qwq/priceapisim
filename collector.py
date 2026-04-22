@@ -71,8 +71,8 @@ if not TQ_ACCOUNT or not TQ_PASSWORD:
     sys.exit(1)
 
 # 合约列表（根据实际调整）
-# 使用主连合约自动跟踪主力，也可指定具体合约如 GFEX.PT2606,GFEX.PD2606
-SYMBOLS = os.getenv("SYMBOLS", "KQ.m@GFEX.PT,KQ.m@GFEX.PD").split(",")
+# 使用具体合约，避免主连换月问题
+SYMBOLS = os.getenv("SYMBOLS", "GFEX.PT2606,GFEX.PD2606").split(",")
 
 
 # ---------------------------- 数据处理 ----------------------------
