@@ -7,9 +7,9 @@ import os
 import sys
 import logging
 import datetime
-from collections import deque
+import asyncio
 import signal
-import threading
+from collections import deque
 
 from tqsdk import TqApi, TqAuth, TqKq
 import sqlalchemy as db
@@ -101,20 +101,6 @@ def get_tick_values(quote) -> dict | None:
         return None
 
 
-def save_tick(session, symbol: str, values: dict):
-    """写入 tick，忽略重复"""
-    try:
-        tick = TickData(symbol=symbol, **values)
-        session.add(tick)
-        session.commit()
-        logger.debug(f"写入: {symbol} {values['last_price']}")
-    except db.exc.IntegrityError:
-        session.rollback()
-    except Exception as e:
-        session.rollback()
-        logger.error(f"写入失败: {e}")
-
-
 # ---------------------------- 批次写入 ----------------------------
 
 class TickWriter:
@@ -168,9 +154,50 @@ class Collector:
         self.running = False
         self.quotes = {}
         self.last_data_time = {}
+        self._shutdown_requested = False
+
+    def _request_shutdown(self, signum=None, frame=None):
+        """信号处理：标记关闭，不在信号处理函数中做清理"""
+        logger.info(f"收到停止信号，准备优雅退出...")
+        self._shutdown_requested = True
+        self.running = False
+
+    def _graceful_close(self):
+        """确保 TqApi 正确关闭，清理 asyncio 事件循环"""
+        if self.api is not None:
+            try:
+                self.api.close()
+                logger.info("TqApi 已关闭")
+            except Exception as e:
+                logger.warning(f"TqApi 关闭时出错: {e}")
+            finally:
+                self.api = None
+
+        # 清理残留的 asyncio 任务和事件循环
+        try:
+            loop = asyncio.get_event_loop()
+            if loop and not loop.is_closed():
+                # 取消所有未完成的任务
+                pending = asyncio.all_tasks(loop) if hasattr(asyncio, 'all_tasks') else asyncio.Task.all_tasks(loop)
+                for task in pending:
+                    task.cancel()
+                # 等待任务取消完成
+                if pending:
+                    loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+                loop.close()
+                logger.info("asyncio 事件循环已清理")
+        except RuntimeError:
+            # 没有 event loop，忽略
+            pass
+        except Exception as e:
+            logger.debug(f"清理事件循环时出错（可忽略）: {e}")
 
     def start(self):
         init_db()
+
+        # 注册信号处理
+        signal.signal(signal.SIGTERM, self._request_shutdown)
+        signal.signal(signal.SIGINT, self._request_shutdown)
 
         logger.info("连接天勤...")
         try:
@@ -191,22 +218,22 @@ class Collector:
 
         if not self.quotes:
             logger.error("没有合约订阅成功")
+            self._graceful_close()
             sys.exit(1)
 
         writer = TickWriter(batch_size=50, flush_interval=5.0)
         self.running = True
 
-        # 信号处理
-        def signal_handler(sig, frame):
-            logger.info("收到停止信号")
-            self.running = False
-        signal.signal(signal.SIGTERM, signal_handler)
-        signal.signal(signal.SIGINT, signal_handler)
-
         logger.info("开始采集...")
         try:
             while self.running:
-                self.api.wait_update(deadline=30)
+                try:
+                    self.api.wait_update(deadline=30)
+                except Exception as e:
+                    if self._shutdown_requested:
+                        break
+                    logger.warning(f"wait_update 异常: {e}")
+                    continue
 
                 for sym, quote in self.quotes.items():
                     try:
@@ -222,12 +249,15 @@ class Collector:
 
                 writer.auto_flush()
 
+                # 检查关闭信号
+                if self._shutdown_requested:
+                    break
+
         except Exception as e:
             logger.error(f"运行错误: {e}", exc_info=True)
         finally:
             writer.flush()
-            if self.api:
-                self.api.close()
+            self._graceful_close()
             logger.info("采集器已停止")
 
 
