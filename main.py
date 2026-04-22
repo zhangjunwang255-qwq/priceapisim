@@ -179,7 +179,7 @@ async def root():
         <div class="refresh">自动刷新每 3 秒</div>
     </div>
     <script>
-        const colors = { pb: '#e6c200', pd: '#c0c0c0' };
+        const colors = { PT: '#e6c200', PD: '#c0c0c0' };
         
         async function fetchData() {
             try {
@@ -199,7 +199,7 @@ async def root():
             
             let html = '';
             data.forEach(item => {
-                const symbolClass = item.symbol.toLowerCase().includes('pb') ? 'pb' : 'pd';
+                const symbolClass = item.symbol.toUpperCase().includes('PT') ? 'PT' : 'PD';
                 const color = colors[symbolClass] || '#fff';
                 html += `
                     <div class="card">
@@ -234,7 +234,7 @@ async def get_latest(symbols: str = Query("", description="合约代码逗号分
     session = SessionLocal()
     try:
         result = []
-        symbol_list = [s.strip() for s in symbols.split(",") if s.strip()] if symbols else ["GFEX.pb2406", "GFEX.pd2406"]
+        symbol_list = [s.strip() for s in symbols.split(",") if s.strip()] if symbols else ["KQ.m@GFEX.PT", "KQ.m@GFEX.PD"]
         
         for sym in symbol_list:
             # 查询每个合约的最新一条
