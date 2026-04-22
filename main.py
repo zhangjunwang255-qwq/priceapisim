@@ -229,12 +229,12 @@ async def root():
 
 
 @app.get("/api/latest", response_model=list[LatestResponse])
-async def get_latest(symbols: str = Query("", description="合约代码逗号分隔，如 GFEX.pb2406,GFEX.pd2406")):
+async def get_latest(symbols: str = Query("", description="合约代码逗号分隔，如 GFEX.PT2606,GFEX.PD2606")):
     """获取各合约最新行情"""
     session = SessionLocal()
     try:
         result = []
-        symbol_list = [s.strip() for s in symbols.split(",") if s.strip()] if symbols else ["KQ.m@GFEX.PT", "KQ.m@GFEX.PD"]
+        symbol_list = [s.strip() for s in symbols.split(",") if s.strip()] if symbols else ["GFEX.PT2606", "GFEX.PD2606"]
         
         for sym in symbol_list:
             # 查询每个合约的最新一条
