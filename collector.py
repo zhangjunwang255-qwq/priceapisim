@@ -72,7 +72,7 @@ if not TQ_ACCOUNT or not TQ_PASSWORD:
 
 # 合约列表（根据实际调整）
 # 使用具体合约，避免主连换月问题
-SYMBOLS = os.getenv("SYMBOLS", "GFEX.PT2606,GFEX.PD2606").split(",")
+SYMBOLS = os.getenv("SYMBOLS", "KQ.m@GFEX.pt,KQ.m@GFEX.pd").split(",")
 
 
 # ---------------------------- 数据处理 ----------------------------
